@@ -1,5 +1,3 @@
-
-
 import pandas as pd
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -8,14 +6,15 @@ from io import BytesIO
 from PIL import Image
 
 # Define the allowed units for each entity type
-ALLOWED_UNITS = {
-    'item_weight': ['gram', 'kilogram', 'ounce', 'pound'],
-    'item_length': ['millimetre', 'centimetre', 'metre', 'inch', 'foot', 'yard'],
-    'item_width': ['millimetre', 'centimetre', 'metre', 'inch', 'foot', 'yard'],
-    'item_height': ['millimetre', 'centimetre', 'metre', 'inch', 'foot', 'yard'],
-    'item_voltage': ['volt', 'kilovolt', 'millivolt'],
-    'item_wattage': ['watt', 'kilowatt'],
-    # Add more entity types and their allowed units as needed
+entity_unit_map = {
+    'width': {'centimetre', 'foot', 'inch', 'metre', 'millimetre', 'yard'},
+    'depth': {'centimetre', 'foot', 'inch', 'metre', 'millimetre', 'yard'},
+    'height': {'centimetre', 'foot', 'inch', 'metre', 'millimetre', 'yard'},
+    'item_weight': {'gram', 'kilogram', 'microgram', 'milligram', 'ounce', 'pound', 'ton'},
+    'maximum_weight_recommendation': {'gram', 'kilogram', 'microgram', 'milligram', 'ounce', 'pound', 'ton'},
+    'voltage': {'kilovolt', 'millivolt', 'volt'},
+    'wattage': {'kilowatt', 'watt'},
+    'item_volume': {'centilitre', 'cubic foot', 'cubic inch', 'cup', 'decilitre', 'fluid ounce', 'gallon', 'imperial gallon', 'litre', 'microlitre', 'millilitre', 'pint', 'quart'}
 }
 
 def process_image(image_link):
@@ -38,20 +37,20 @@ def format_prediction(value, entity_name):
     if value <= 0:
         return ""
     
-    allowed_units = ALLOWED_UNITS.get(entity_name, [])
+    allowed_units = list(entity_unit_map.get(entity_name, set()))
     if not allowed_units:
         return ""
     
     # Choose an appropriate unit based on the value and entity type
-    if entity_name in ['item_weight', 'item_length', 'item_width', 'item_height']:
+    if entity_name in ['width', 'depth', 'height', 'item_weight']:
         if value < 1:
-            unit = allowed_units[0]  # Smallest unit (e.g., gram, millimetre)
+            unit = allowed_units[0]  # Smallest unit (e.g., millimetre, gram)
         elif value > 1000:
-            unit = allowed_units[1]  # Largest unit (e.g., kilogram, metre)
+            unit = allowed_units[-1]  # Largest unit (e.g., metre, kilogram)
             value /= 1000  # Convert to larger unit
         else:
             unit = allowed_units[0]  # Use the smallest unit as default
-    elif entity_name == 'item_voltage':
+    elif entity_name == 'voltage':
         if value >= 1000:
             unit = 'kilovolt'
             value /= 1000
@@ -60,7 +59,7 @@ def format_prediction(value, entity_name):
             value *= 1000
         else:
             unit = 'volt'
-    elif entity_name == 'item_wattage':
+    elif entity_name == 'wattage':
         if value >= 1000:
             unit = 'kilowatt'
             value /= 1000
