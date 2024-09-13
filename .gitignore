@@ -3,3 +3,6 @@
 
 # Ignore the images folder
 images/
+
+*.npy
+*.h5
